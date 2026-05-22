@@ -1,0 +1,4 @@
+DHT11_Lite  KEYWORD1
+DHT11Data   KEYWORD1
+
+read    KEYWORD2
