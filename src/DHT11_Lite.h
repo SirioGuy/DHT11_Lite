@@ -1,14 +1,14 @@
 /*
- *  DHT11_Lite
- *  Lightweight, non-blocking DHT11 driver for AVR-based Arduino boards.
- *  Uses direct port manipulation and a state machine to avoid any blocking
- *  calls, keeping the MCU free between sensor phases.
- *
- *  Author:   Sirio Guy
- *  Version:  1.0.0
- *  Date:     2026
- *  License:  MIT
- */
+*  DHT11_Lite
+*  Lightweight, non-blocking DHT11 driver for AVR-based Arduino boards.
+*  Uses direct port manipulation and a state machine to avoid any blocking
+*  calls, keeping the MCU free between sensor phases.
+*
+*  Author:   Sirio Guy
+*  Version:  1.0.0
+*  Date:     2026
+*  License:  MIT
+*/
 
 
 
