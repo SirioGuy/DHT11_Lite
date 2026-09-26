@@ -19,9 +19,6 @@ Instead of using `delay()` to bit-bang the DHT11's single-wire protocol, `DHT11_
 > [!WARNING]
 > **AVR only.** This library accesses AVR port registers directly and will fail to compile on non-AVR boards (ESP32, ESP8266, SAMD, RP2040, etc.).
 
-> [!WARNING]
-> **DHT11 only.** The DHT22/AM2302 use a different data format and are **not** compatible with this library as-is.
-
 ## Installation
 
 ### Arduino IDE

@@ -59,7 +59,7 @@ DHT11_Lite::DHT11_Lite(uint8_t pin, uint32_t cooldownS)
 
 
 
-// The DHT11 sends 5 bytes. The 5th is the checksum: it must equal the lower 8 bits of the sum of the first 4 bytes.
+// Checksum is the low 8 bits of the sum of the first 4 bytes, per the datasheet
 
 bool DHT11_Lite::_validateChecksum(){
 
@@ -71,11 +71,7 @@ bool DHT11_Lite::_validateChecksum(){
 
 
 
-// For DHT11 specifically:
-//   - _rawData[0] = humidity integer part
-//   - _rawData[1] = humidity decimal part (always 0 for DHT11)
-//   - _rawData[2] = temperature integer part
-//   - _rawData[3] = temperature decimal part (always 0 for DHT11)
+// For DHT11 the decimal parts (rawData[1] and rawData[3]) are always 0
 
 void DHT11_Lite::_decodeData(DHT11Data &result){
 
@@ -89,7 +85,6 @@ void DHT11_Lite::_decodeData(DHT11Data &result){
 
 
 
-// Centralizes the transition back to idle/cooldown.
 
 void DHT11_Lite::_resetToIdle(DHT11Data &result, bool withError){
 
@@ -131,8 +126,8 @@ void DHT11_Lite::_resetToIdle(DHT11Data &result, bool withError){
 
 
 
-// Non-blocking state machine. Must be called repeatedly from loop().
-// Returns true exactly once per completed reading (valid or failed).
+// Non-blocking state machine, must be called repeatedly from loop()
+// Returns true exactly once per completed reading, valid or failed
 
 bool DHT11_Lite::read(DHT11Data &result) {
 
@@ -140,7 +135,7 @@ bool DHT11_Lite::read(DHT11Data &result) {
     switch (_state) {
 
 
-        // Immediately begin a new measurement cycle.
+        // Immediately begin a new measurement cycle
 
         case DHT11_STATE_IDLE:
 
@@ -157,7 +152,7 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
 
 
-        // Hold bus LOW for DHT11_START_LOW_MS (20ms).
+        // Hold bus low for DHT11_START_LOW_US (20 ms)
 
         case DHT11_STATE_START_LOW:
 
@@ -178,13 +173,13 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
 
 
-        // MCU released the bus. We wait up to DHT11_RESPONSE_TIMEOUT_US for the DHT to pull it LOW as its acknowledgement.
+        // MCU released the bus. We wait up to DHT11_RESPONSE_TIMEOUT_US for the DHT to pull it low as its acknowledgement
 
         case DHT11_STATE_START_HIGH:
 
           if (_pinRead() == 0){
 
-              // DHT pulled LOW >> acknowledgement started
+              // Acknowledgement started
 
               _stateTimestamp = micros();
 
@@ -194,7 +189,7 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
           } else if (micros() - _stateTimestamp  >=  DHT11_RESPONSE_TIMEOUT_US){
 
-              // DHT never responded >> error
+              // Error: DHT11 never responded
 
               _resetToIdle(result, true);
 
@@ -206,13 +201,13 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
 
 
-        // DHT holds LOW for ~80us. We wait for it to go HIGH.
+        // DHT holds low for about 80us, wait for it to go high
 
         case DHT11_STATE_RESPONSE_LOW:
 
           if (_pinRead() == 1){
 
-              // DHT released the bus >> response LOW phase done
+              // DHT released the bus
 
               _stateTimestamp = micros();
 
@@ -231,13 +226,13 @@ bool DHT11_Lite::read(DHT11Data &result) {
         break;
 
 
-        // DHT holds HIGH for ~80us to prepare for data transmission.
+        // DHT holds high for about 80us before sending the first bit
 
         case DHT11_STATE_RESPONSE_HIGH:
 
           if (_pinRead() == 0){
 
-              // DHT pulled LOW >> first bit LOW phase starting
+              // First bit low phase starting
 
               _stateTimestamp = micros();
 
@@ -257,14 +252,15 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
 
 
-        // Every bit starts with a ~50us LOW pulse from the DHT. We wait for the rising edge to start timing the HIGH phase.
+        // Every bit starts with a low pulse, wait for the rising edge
 
-        case DHT11_STATE_BIT_LOW:
+        case DHT11_STATE_BIT_LOW: {
 
+          // Read the pin and the timestamp together so an interrupt firing in between can't desync them
 
           noInterrupts();
 
-          uint8_t pinState = _pinRead;
+          uint8_t pinState = _pinRead();
 
           uint32_t now = micros();
 
@@ -273,7 +269,7 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
           if (pinState == 1){
 
-              // Rising edge: LOW phase ended, HIGH phase begins
+              // High phase begins
 
               _bitHighStart = now;
 
@@ -289,25 +285,19 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
           }
 
-        break;
+        break; }
 
 
 
-        // The duration of this HIGH phase encodes the bit value:
-        //   ~26-28us → bit '0'
-        //   ~70us    → bit '1'
-        // We use DHT11_BIT_THRESHOLD_US (50us) as the decision boundary.
-        //
-        // Bit packing: DHT sends MSB first.
-        // _rawData[0] fills up first (bits 0-7), then [1], [2], [3], [4].
-        // Within each byte, bit 0 is the MSB → we shift left and OR the new bit.
+        // The duration of this high phase encodes the bit value: about 26 to 28us is a 0, about 70us is a 1
+        // bits are received MSB first, filling rawData[0] through rawData[4]
 
-        case DHT11_STATE_BIT_HIGH:
+        case DHT11_STATE_BIT_HIGH:{
 
 
           noInterrupts();
 
-          uint8_t pinState = _pinRead;
+          uint8_t pinState = _pinRead();
 
           uint32_t now = micros();
 
@@ -316,7 +306,7 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
           if (pinState == 0){
 
-              // Falling edge: HIGH phase ended, measure its duration
+              // High phase ended, measure its duration
 
               uint32_t highDuration = now - _bitHighStart;
 
@@ -401,7 +391,7 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
           }
 
-        break;
+        break; }
 
 
 

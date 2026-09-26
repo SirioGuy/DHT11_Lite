@@ -17,9 +17,9 @@
 #endif
 
 
-#include "Arduino.h"
+#include <Arduino.h>
 
-#include "stdint.h"
+#include <stdint.h>
 
 
 
@@ -39,7 +39,7 @@
 
 
 
-// State machine
+// State machine states
 
 typedef enum : uint8_t {
 
@@ -50,13 +50,13 @@ typedef enum : uint8_t {
 
     DHT11_STATE_START_HIGH,         // MCU released bus, waiting for DHT response
 
-    DHT11_STATE_RESPONSE_LOW,       // DHT pulling LOW for 80us (acknowledgement)
+    DHT11_STATE_RESPONSE_LOW,       // DHT pulling low for 80us (acknowledgement)
 
-    DHT11_STATE_RESPONSE_HIGH,      // DHT pulling HIGH for 80us (prep for data)
+    DHT11_STATE_RESPONSE_HIGH,      // DHT pulling high for 80us (prep for data)
 
     DHT11_STATE_BIT_LOW,            // Start of a bit: DHT pulls LOW for 50us
 
-    DHT11_STATE_BIT_HIGH,           // DHT pulls HIGH: duration encodes 0 or 1
+    DHT11_STATE_BIT_HIGH,           // DHT pulls high: duration encodes 0 or 1
 
     DHT11_STATE_COOLDOWN,           // Waiting before next reading is allowed
 
@@ -74,7 +74,7 @@ typedef struct {
 
     uint8_t humidity;       // Relative humidity %, range 20-90 for DHT11
 
-    bool    error;          // true if reading failed (timeout or bad checksum)
+    bool    error;          // true if reading failed, timeout or bad checksum
 
 
 } DHT11Data;
