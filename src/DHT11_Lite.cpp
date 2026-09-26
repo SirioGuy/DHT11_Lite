@@ -5,7 +5,7 @@
 *  calls, keeping the MCU free between sensor phases.
 *
 *  Author:   Sirio Guy
-*  Version:  1.0.0
+*  Version:  1.0.1
 *  Date:     2026
 *  License:  MIT
 */
@@ -17,8 +17,8 @@
 
 // Constructor
 
-DHT11_Lite::DHT11_Lite(uint8_t pin, uint32_t cooldownS = DHT11_COOLDOWN_S)
-    : _cooldownS(cooldownS){
+DHT11_Lite::DHT11_Lite(uint8_t pin, uint32_t cooldownS)
+    : _cooldownS(cooldownS < DHT11_COOLDOWN_S ? DHT11_COOLDOWN_S : cooldownS){
 
 
     uint8_t port = digitalPinToPort(pin);
@@ -149,7 +149,7 @@ bool DHT11_Lite::read(DHT11Data &result) {
           _pinLow();
 
 
-          _stateTimestamp = millis();
+          _stateTimestamp = micros();
 
           _state = DHT11_STATE_START_LOW;
 
@@ -161,7 +161,7 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
         case DHT11_STATE_START_LOW:
 
-          if (millis() - _stateTimestamp  >=  DHT11_START_LOW_MS){
+          if (micros() - _stateTimestamp  >=  DHT11_START_LOW_MS){
 
               _pinHigh();
 
@@ -261,17 +261,27 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
         case DHT11_STATE_BIT_LOW:
 
-          if (_pinRead() == 1){
+
+          noInterrupts();
+
+          uint8_t pinState = _pinRead;
+
+          uint32_t now = micros();
+
+          interrupts();
+
+
+          if (pinState == 1){
 
               // Rising edge: LOW phase ended, HIGH phase begins
 
-              _bitHighStart = micros();
+              _bitHighStart = now;
 
               _state = DHT11_STATE_BIT_HIGH;
 
 
 
-          } else if (micros() - _stateTimestamp  >=  DHT11_BIT_TIMEOUT_US){
+          } else if (now - _stateTimestamp  >=  DHT11_BIT_TIMEOUT_US){
 
               _resetToIdle(result, true);
 
@@ -294,11 +304,21 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
         case DHT11_STATE_BIT_HIGH:
 
-          if (_pinRead() == 0){
+
+          noInterrupts();
+
+          uint8_t pinState = _pinRead;
+
+          uint32_t now = micros();
+
+          interrupts();
+
+
+          if (pinState == 0){
 
               // Falling edge: HIGH phase ended, measure its duration
 
-              uint32_t highDuration = micros() - _bitHighStart;
+              uint32_t highDuration = now - _bitHighStart;
 
 
               uint8_t byteIndex = _bitIndex / 8;  // which of the 5 bytes
@@ -355,7 +375,7 @@ bool DHT11_Lite::read(DHT11Data &result) {
                   }
 
 
-                  _stateTimestamp = millis();
+                  _stateTimestamp = micros();
                   
                   _state = DHT11_STATE_COOLDOWN;
 
@@ -373,7 +393,7 @@ bool DHT11_Lite::read(DHT11Data &result) {
               }
 
 
-          } else if (micros() - _bitHighStart  >=  DHT11_BIT_TIMEOUT_US){
+          } else if (now - _bitHighStart  >=  DHT11_BIT_TIMEOUT_US){
 
               _resetToIdle(result, true);
 
@@ -389,7 +409,7 @@ bool DHT11_Lite::read(DHT11Data &result) {
 
         case DHT11_STATE_COOLDOWN:
 
-          if (millis() - _stateTimestamp >= _cooldownS * 1000) {
+          if (micros() - _stateTimestamp >= _cooldownS * 1000000UL) {
 
               _state = DHT11_STATE_IDLE;
 

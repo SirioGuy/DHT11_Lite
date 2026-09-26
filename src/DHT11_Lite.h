@@ -5,34 +5,27 @@
 *  calls, keeping the MCU free between sensor phases.
 *
 *  Author:   Sirio Guy
-*  Version:  1.0.0
+*  Version:  1.0.1
 *  Date:     2026
 *  License:  MIT
 */
 
-
-
 #pragma once
 
-
-
 #ifndef ARDUINO_ARCH_AVR
-
     #error "This library only supports boards with an AVR processor."
-
 #endif
 
 
+#include "Arduino.h"
 
-#include <Arduino.h>
-
-#include <stdint.h>
+#include "stdint.h"
 
 
 
 // Timing constants
 
-#define DHT11_START_LOW_MS      20      // MCU holds bus LOW (>= 18ms)
+#define DHT11_START_LOW_US      20000UL      // MCU holds bus LOW (>= 18ms)
 
 #define DHT11_START_HIGH_US     40      // MCU releases HIGH before sampling response
 
@@ -42,7 +35,7 @@
 
 #define DHT11_BIT_TIMEOUT_US    100     // Max duration of any single bit pulse
 
-#define DHT11_COOLDOWN_S        1    // Minimum time between readings (>= 1s)
+#define DHT11_COOLDOWN_S        1       // Minimum time between readings (>= 1s)
 
 
 
@@ -98,8 +91,8 @@ class DHT11_Lite {
       DHT11_Lite(uint8_t pin, uint32_t cooldownS = DHT11_COOLDOWN_S);
 
 
-      // Call repeatedly from loop(). Returns true when a valid reading is ready in result.
-      bool read(DHT11Data &result);
+      bool read(DHT11Data &result);     // Call repeatedly from loop(). Returns true when a valid reading is ready in result.
+
 
 
   private:
@@ -118,11 +111,11 @@ class DHT11_Lite {
 
       // State machine
 
-      DHT11State  _state;
+      DHT11State    _state;
 
-      uint32_t    _stateTimestamp;    // Timestamp of last state transition
+      uint32_t      _stateTimestamp;    // Timestamp of last state transition 
 
-      uint32_t    _cooldownS;
+      uint32_t      _cooldownS;
 
 
 
